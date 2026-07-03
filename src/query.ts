@@ -1,6 +1,6 @@
 import { ask } from "./llm.js";
 import { buildPrompt, formatSources } from "./prompt.js";
-import { retrieve } from "./retriever.js";
+import { retrieveHybrid } from "./retriever.js";
 
 async function main() {
   const question =
@@ -10,7 +10,7 @@ async function main() {
   console.log(`Question: ${question}\n`);
   console.log("Searching index...");
 
-  const chunks = await retrieve(question);
+  const chunks = await retrieveHybrid(question);
 
   console.log(`Found ${chunks.length} relevant chunks\n`);
 

@@ -27,6 +27,10 @@ export const config = {
     debounceMs: 2000,
   },
 
+  agent: {
+    maxSteps: 8,
+  },
+
   include: [
     "**/*.ts",
     "**/*.tsx",

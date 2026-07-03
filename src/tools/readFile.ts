@@ -3,7 +3,7 @@ import path from "path";
 
 import { config } from "../config.js";
 
-function resolveProjectPath(relativePath: string): string {
+export function resolveProjectPath(relativePath: string): string {
   const normalized = relativePath.replace(/\\/g, "/");
   const fullPath = path.resolve(config.projectPath, normalized);
   const root = path.resolve(config.projectPath);

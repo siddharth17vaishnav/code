@@ -9,6 +9,7 @@
     "watch": "tsx src/watch.ts",
     "query": "tsx src/query.ts",
     "chat": "tsx src/chat.ts",
+    "chat:simple": "tsx src/chat.ts --simple",
     "chat:watch": "tsx src/chat.ts --watch",
     "dev": "tsx src/index.ts"
   },
