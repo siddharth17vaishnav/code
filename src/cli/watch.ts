@@ -1,9 +1,10 @@
 import { config } from "../core/config.js";
 import { startWatcher } from "../indexing/watcher.js";
+import { runIfDirect } from "../core/cliEntry.js";
 
-async function main() {
+export async function runWatch() {
   console.log(`Project: ${config.projectPath}`);
   startWatcher();
 }
 
-main().catch(console.error);
+runIfDirect(import.meta.url, runWatch);

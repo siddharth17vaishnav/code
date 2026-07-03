@@ -9,7 +9,25 @@ export interface ParsedCli {
 
 let cached: ParsedCli | null = null;
 
+export const CLI_COMMANDS = new Set([
+  "chat",
+  "index",
+  "query",
+  "watch",
+  "dev",
+]);
+
 const PROJECT_FLAGS = new Set(["--project", "-p"]);
+
+function getRawArgs(): string[] {
+  const args = process.argv.slice(2);
+
+  if (args.length > 0 && CLI_COMMANDS.has(args[0]!)) {
+    return args.slice(1);
+  }
+
+  return args;
+}
 
 function isDirectory(rawPath: string): boolean {
   const resolved = path.resolve(rawPath);
@@ -40,7 +58,7 @@ export function parseCli(): ParsedCli {
     return cached;
   }
 
-  const args = process.argv.slice(2);
+  const args = getRawArgs();
   let projectPath: string | undefined;
   const flags = new Set<string>();
   const positionals: string[] = [];
@@ -86,7 +104,7 @@ export function parseCli(): ParsedCli {
 }
 
 export function getArgValue(...flags: string[]): string | undefined {
-  const args = process.argv.slice(2);
+  const args = getRawArgs();
 
   for (const flag of flags) {
     const eqPrefix = `${flag}=`;

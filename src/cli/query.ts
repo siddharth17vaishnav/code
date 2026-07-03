@@ -2,8 +2,9 @@ import { ask } from "../llm/llm.js";
 import { getQueryText } from "../core/cliArgs.js";
 import { buildPrompt, formatSources } from "../llm/prompt.js";
 import { retrieveHybrid } from "../retrieval/retriever.js";
+import { runIfDirect } from "../core/cliEntry.js";
 
-async function main() {
+export async function runQuery() {
   const question =
     getQueryText() || "Explain how the theme system works.";
 
@@ -23,4 +24,4 @@ async function main() {
   console.log(formatSources(chunks));
 }
 
-main().catch(console.error);
+runIfDirect(import.meta.url, runQuery);

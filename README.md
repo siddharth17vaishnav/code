@@ -1,4 +1,4 @@
-# AI Assistant
+# LocalCode
 
 A local coding assistant powered by **Ollama** and **RAG** (Retrieval-Augmented Generation). Index any codebase, ask questions about it, and let an agent read files, search symbols, and propose edits — all running on your machine.
 
@@ -56,10 +56,37 @@ ollama pull nomic-embed-text
 
 ## Installation
 
+### From source
+
 ```bash
 git clone https://github.com/siddharth17vaishnav/ai-assistant.git
 cd ai-assistant
 npm install
+npm run build
+```
+
+### As a global CLI
+
+```bash
+npm install -g localcode
+# or from this repo:
+npm link
+```
+
+Then use the `localcode` command anywhere:
+
+```bash
+localcode index ./my-app
+localcode chat ./my-app
+localcode query ./my-app "How does routing work?"
+localcode --help
+```
+
+### Build the package
+
+```bash
+npm run build          # compile to dist/
+npm pack               # create localcode-1.0.0.tgz
 ```
 
 Create a `.env` file:
@@ -104,8 +131,11 @@ npm run index -- --project ./my-app
 
 ## Scripts
 
+Development (TypeScript directly via tsx):
+
 | Command | Description |
 |---------|-------------|
+| `npm run build` | Compile TypeScript to `dist/` |
 | `npm run index` | Incremental index sync |
 | `npm run index:full` | Full rebuild of the index |
 | `npm run chat` | Interactive agent chat (default) |
@@ -114,6 +144,13 @@ npm run index -- --project ./my-app
 | `npm run query` | One-shot question from the terminal |
 | `npm run watch` | Watch files and re-index on changes |
 | `npm run dev` | List loaded project files (smoke test) |
+
+Production (compiled CLI):
+
+```bash
+localcode chat ./my-app
+localcode index ./my-app --full
+```
 
 ### Flags
 

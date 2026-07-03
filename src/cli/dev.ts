@@ -1,7 +1,8 @@
 import { config } from "../core/config.js";
 import { loadProject } from "../indexing/loader.js";
+import { runIfDirect } from "../core/cliEntry.js";
 
-async function main() {
+export async function runDev() {
   console.log(`Project: ${config.projectPath}\n`);
 
   const files = await loadProject();
@@ -13,4 +14,4 @@ async function main() {
   }
 }
 
-main().catch(console.error);
+runIfDirect(import.meta.url, runDev);

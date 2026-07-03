@@ -1,11 +1,11 @@
 import { config } from "../core/config.js";
 import { syncIndex } from "../indexing/syncIndex.js";
-
 import { hasFlag } from "../core/cliArgs.js";
+import { runIfDirect } from "../core/cliEntry.js";
 
-const forceFull = hasFlag("--full");
+export async function runIndexer() {
+  const forceFull = hasFlag("--full");
 
-async function main() {
   console.log(`Project: ${config.projectPath}`);
   console.log(`Index storage: ${config.projectStorageDir}`);
   console.log(forceFull ? "Mode: full (--full flag)" : "Mode: incremental");
@@ -13,4 +13,4 @@ async function main() {
   await syncIndex({ forceFull });
 }
 
-main().catch(console.error);
+runIfDirect(import.meta.url, runIndexer);

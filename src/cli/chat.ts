@@ -34,6 +34,7 @@ import { startWatcher } from "../indexing/watcher.js";
 import { confirmDiffPreview } from "../preview/confirmPreview.js";
 import { config } from "../core/config.js";
 import { hasFlag } from "../core/cliArgs.js";
+import { runIfDirect } from "../core/cliEntry.js";
 import {
   formatIndexedProjects,
   listIndexedProjects,
@@ -334,7 +335,7 @@ async function answerWithAgent(
   return answer;
 }
 
-async function main() {
+export async function runChat() {
   if (enableWatch) {
     startWatcher();
   }
@@ -347,7 +348,7 @@ async function main() {
   };
 
   const modeLabel = simpleMode ? "simple RAG" : "agent";
-  console.log(`AI Coding Assistant (${modeLabel})`);
+  console.log(`LocalCode (${modeLabel})`);
   console.log(`Project: ${config.projectPath}`);
   console.log(`Index storage: ${config.projectStorageDir}\n`);
 
@@ -378,4 +379,4 @@ async function main() {
   rl.close();
 }
 
-main().catch(console.error);
+runIfDirect(import.meta.url, runChat);

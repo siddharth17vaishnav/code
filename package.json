@@ -1,29 +1,52 @@
 {
-  "name": "ai-assistant",
+  "name": "localcode",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "LocalCode — local RAG coding assistant powered by Ollama and LanceDB",
+  "type": "module",
+  "main": "./dist/cli/main.js",
+  "bin": {
+    "localcode": "./dist/cli/main.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
-    "index": "tsx src/cli/indexer.ts",
-    "index:full": "tsx src/cli/indexer.ts --full",
-    "watch": "tsx src/cli/watch.ts",
-    "query": "tsx src/cli/query.ts",
+    "build": "tsc",
+    "prepack": "npm run build",
+    "dev": "tsx src/cli/dev.ts",
     "chat": "tsx src/cli/chat.ts",
     "chat:simple": "tsx src/cli/chat.ts --simple",
     "chat:watch": "tsx src/cli/chat.ts --watch",
-    "dev": "tsx src/cli/dev.ts"
+    "index": "tsx src/cli/indexer.ts",
+    "index:full": "tsx src/cli/indexer.ts --full",
+    "query": "tsx src/cli/query.ts",
+    "watch": "tsx src/cli/watch.ts",
+    "start": "node dist/cli/main.js"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "ai",
+    "ollama",
+    "rag",
+    "lancedb",
+    "coding-assistant",
+    "local-llm",
+    "vector-search"
+  ],
+  "author": "Siddharth Vaishnav",
   "license": "ISC",
-  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/siddharth17vaishnav/ai-assistant.git"
+  },
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "@lancedb/lancedb": "^0.31.0",
-    "@llamaindex/ollama": "^0.1.23",
     "dotenv": "^17.4.2",
     "fast-glob": "^3.3.3",
     "ignore": "^7.0.5",
-    "llamaindex": "^0.12.1",
     "ts-morph": "^28.0.0"
   },
   "devDependencies": {
