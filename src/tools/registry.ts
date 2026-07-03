@@ -16,9 +16,10 @@ import { formatFileWithLineNumbers, readProjectFile } from "./readFile.js";
 import { findSymbol, formatSymbolResults } from "./symbols.js";
 import { writeProjectFile } from "./writeFile.js";
 import {
-  buildMutationPreview,
+  buildMutationDiffPreview,
   MUTATING_TOOLS,
 } from "./diff.js";
+import type { DiffPreview } from "../types.js";
 
 export interface ToolDefinition {
   type: "function";
@@ -36,7 +37,7 @@ export interface ToolDefinition {
 type ToolHandler = (args: Record<string, unknown>) => Promise<string>;
 
 export interface ToolContext {
-  confirm?: (preview: string) => Promise<boolean>;
+  confirm?: (preview: DiffPreview) => Promise<boolean>;
 }
 
 interface RegisteredTool {
@@ -326,7 +327,7 @@ export async function executeTool(
   }
 
   if (MUTATING_TOOLS.has(name)) {
-    const preview = await buildMutationPreview(name, args);
+    const preview = await buildMutationDiffPreview(name, args);
 
     if (context?.confirm) {
       const approved = await context.confirm(preview);

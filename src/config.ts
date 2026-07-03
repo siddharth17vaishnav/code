@@ -32,6 +32,13 @@ export const config = {
     maxHistoryTurns: 10,
   },
 
+  preview: {
+    enabled: true,
+    host: "127.0.0.1",
+    port: 3847,
+    timeoutMs: 5 * 60 * 1000,
+  },
+
   include: [
     "**/*.ts",
     "**/*.tsx",

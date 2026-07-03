@@ -7,7 +7,7 @@ import { buildPrompt, formatSources } from "./prompt.js";
 import { retrieveHybrid } from "./retriever.js";
 import { appendTurn, trimHistory } from "./session.js";
 import { syncIndex } from "./syncIndex.js";
-import { previewEdit, previewWrite } from "./tools/diff.js";
+import { buildEditDiffPreview, buildWriteDiffPreview } from "./tools/diff.js";
 import { editProjectFile } from "./tools/editFile.js";
 import { getGitSummary, getRecentDiff, isGitQuestion } from "./tools/git.js";
 import { formatGrepResults, grep } from "./tools/grep.js";
@@ -31,6 +31,7 @@ import {
 } from "./tools/symbols.js";
 import { writeProjectFile } from "./tools/writeFile.js";
 import { startWatcher } from "./watcher.js";
+import { confirmDiffPreview } from "./web/confirmPreview.js";
 
 const enableWatch = process.argv.includes("--watch");
 const simpleMode = process.argv.includes("--simple");
@@ -55,8 +56,10 @@ Modes:
   Default     Agent mode with conversation memory
   --simple    Single-shot hybrid RAG (still remembers prior turns)
   --watch     Auto-sync index on file changes
+  --no-ui     Terminal-only diff preview (skip browser UI)
 
 Tips:
+  Code changes open in a Claude-style browser preview by default.
   Follow-up questions work: "show me the full file" / "what about tests?"
 `.trim();
 
@@ -76,15 +79,6 @@ async function readMultiline(rl: readline.Interface): Promise<string> {
   }
 
   return lines.join("\n");
-}
-
-async function confirmMutation(
-  rl: readline.Interface,
-  preview: string,
-): Promise<boolean> {
-  console.log(`\n${preview}\n`);
-  const answer = (await rl.question("Apply this change? (y/N): ")).trim();
-  return answer.toLowerCase() === "y" || answer.toLowerCase() === "yes";
 }
 
 async function handleCommand(
@@ -126,9 +120,9 @@ async function handleCommand(
       }
 
       const content = await readMultiline(rl);
-      const preview = await previewWrite(arg, content);
+      const preview = await buildWriteDiffPreview(arg, content);
 
-      if (!(await confirmMutation(rl, preview))) {
+      if (!(await confirmDiffPreview(preview, rl))) {
         console.log("\nCancelled.\n");
         return true;
       }
@@ -148,14 +142,14 @@ async function handleCommand(
       }
 
       const content = await readMultiline(rl);
-      const preview = await previewEdit(
+      const preview = await buildEditDiffPreview(
         filePath,
         Number(startRaw),
         Number(endRaw),
         content,
       );
 
-      if (!(await confirmMutation(rl, preview))) {
+      if (!(await confirmDiffPreview(preview, rl))) {
         console.log("\nCancelled.\n");
         return true;
       }
@@ -311,7 +305,7 @@ async function answerWithAgent(
       console.log(formatAgentStep(step, toolName, args));
     },
     toolContext: {
-      confirm: (preview) => confirmMutation(rl, preview),
+      confirm: (preview) => confirmDiffPreview(preview, rl),
     },
   });
 

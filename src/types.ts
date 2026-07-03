@@ -58,3 +58,17 @@ export interface ReferenceMatch {
   kind: string;
   text: string;
 }
+
+export interface DiffLine {
+  type: "add" | "remove" | "context";
+  content: string;
+  oldLineNumber?: number;
+  newLineNumber?: number;
+}
+
+export interface DiffPreview {
+  title: string;
+  path: string;
+  lines: DiffLine[];
+  summary: string;
+}
