@@ -93,7 +93,11 @@ npm run build          # compile to dist/
 npm pack               # create package tarball
 ```
 
-Create a `.env` file:
+Copy `.env.example` to `.env` and edit as needed:
+
+```bash
+cp .env.example .env
+```
 
 ```env
 PROJECT_PATH=D:\path\to\your\project
