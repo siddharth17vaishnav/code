@@ -2,17 +2,21 @@ import readline from "readline/promises";
 import { stdin as input, stdout as output } from "process";
 
 import { formatAgentStep, runAgent } from "./agent.js";
-import { ask } from "./llm.js";
+import { chat, type ChatMessage } from "./llm.js";
 import { buildPrompt, formatSources } from "./prompt.js";
 import { retrieveHybrid } from "./retriever.js";
+import { appendTurn, trimHistory } from "./session.js";
 import { syncIndex } from "./syncIndex.js";
+import { previewEdit, previewWrite } from "./tools/diff.js";
 import { editProjectFile } from "./tools/editFile.js";
 import { getGitSummary, getRecentDiff, isGitQuestion } from "./tools/git.js";
 import { formatGrepResults, grep } from "./tools/grep.js";
 import {
   formatImports,
   findReferences,
+  findImporters,
   formatReferenceResults,
+  formatImporterResults,
   getImports,
   resetProjectCache,
 } from "./tools/references.js";
@@ -34,6 +38,7 @@ const simpleMode = process.argv.includes("--simple");
 const HELP = `
 Commands:
   /help                      Show this help
+  /clear                     Clear conversation memory
   /read <path>               Read a project file with line numbers
   /write <path>              Write a file (multiline, end with ---)
   /edit <path> <start> <end> Replace line range (multiline, end with ---)
@@ -41,17 +46,18 @@ Commands:
   /find <symbol>             Find function/class/type definitions
   /refs <symbol>             Find all references (AST)
   /imports <path>            List imports in a file
+  /importers <path>          Find files that import a module
   /git                       Show git status and diff summary
   /reindex                   Run incremental index sync
   exit | quit                Quit
 
 Modes:
-  Default     Agent mode — LLM uses tools automatically
-  --simple    Single-shot hybrid RAG (no agent loop)
+  Default     Agent mode with conversation memory
+  --simple    Single-shot hybrid RAG (still remembers prior turns)
   --watch     Auto-sync index on file changes
 
 Tips:
-  Ask natural questions like "Where is ThemeStore used and how does it work?"
+  Follow-up questions work: "show me the full file" / "what about tests?"
 `.trim();
 
 async function readMultiline(rl: readline.Interface): Promise<string> {
@@ -72,15 +78,30 @@ async function readMultiline(rl: readline.Interface): Promise<string> {
   return lines.join("\n");
 }
 
+async function confirmMutation(
+  rl: readline.Interface,
+  preview: string,
+): Promise<boolean> {
+  console.log(`\n${preview}\n`);
+  const answer = (await rl.question("Apply this change? (y/N): ")).trim();
+  return answer.toLowerCase() === "y" || answer.toLowerCase() === "yes";
+}
+
 async function handleCommand(
   line: string,
   rl: readline.Interface,
+  resetHistory: () => void,
 ): Promise<boolean> {
   const [command, ...rest] = line.split(/\s+/);
 
   switch (command.toLowerCase()) {
     case "/help":
       console.log(`\n${HELP}\n`);
+      return true;
+
+    case "/clear":
+      resetHistory();
+      console.log("\nConversation cleared.\n");
       return true;
 
     case "/read": {
@@ -105,6 +126,13 @@ async function handleCommand(
       }
 
       const content = await readMultiline(rl);
+      const preview = await previewWrite(arg, content);
+
+      if (!(await confirmMutation(rl, preview))) {
+        console.log("\nCancelled.\n");
+        return true;
+      }
+
       await writeProjectFile(arg, content);
       await syncProjectAfterWrite();
       console.log(`\n✅ Wrote ${arg} (index synced)\n`);
@@ -120,6 +148,18 @@ async function handleCommand(
       }
 
       const content = await readMultiline(rl);
+      const preview = await previewEdit(
+        filePath,
+        Number(startRaw),
+        Number(endRaw),
+        content,
+      );
+
+      if (!(await confirmMutation(rl, preview))) {
+        console.log("\nCancelled.\n");
+        return true;
+      }
+
       await editProjectFile(
         filePath,
         Number(startRaw),
@@ -185,6 +225,19 @@ async function handleCommand(
       return true;
     }
 
+    case "/importers": {
+      const arg = rest.join(" ").trim();
+
+      if (!arg) {
+        console.log("\nUsage: /importers <path>\n");
+        return true;
+      }
+
+      const matches = await findImporters(arg);
+      console.log(`\n${formatImporterResults(matches)}\n`);
+      return true;
+    }
+
     case "/git": {
       const summary = await getGitSummary();
       console.log(`\n${summary}\n`);
@@ -208,7 +261,7 @@ async function handleCommand(
   }
 }
 
-async function answerSimple(question: string) {
+async function answerSimple(question: string, history: ChatMessage[]) {
   console.log("\nSearching (hybrid)...\n");
 
   const chunks = await retrieveHybrid(question);
@@ -227,24 +280,43 @@ async function answerSimple(question: string) {
   }
 
   const prompt = buildPrompt(question, chunks, extraContext);
-  const answer = await ask(prompt);
+  const result = await chat([
+    {
+      role: "system",
+      content:
+        "You are a coding assistant. Use the provided code context and prior conversation.",
+    },
+    ...trimHistory(history),
+    { role: "user", content: prompt },
+  ]);
 
-  console.log(`Assistant:\n${answer}\n`);
+  console.log(`Assistant:\n${result.content}\n`);
   console.log("Sources:");
   console.log(formatSources(chunks));
   console.log();
+
+  return result.content.trim();
 }
 
-async function answerWithAgent(question: string) {
+async function answerWithAgent(
+  question: string,
+  history: ChatMessage[],
+  rl: readline.Interface,
+) {
   console.log("\nAgent thinking...\n");
 
   const answer = await runAgent(question, {
+    history,
     onStep: (step, toolName, args) => {
       console.log(formatAgentStep(step, toolName, args));
+    },
+    toolContext: {
+      confirm: (preview) => confirmMutation(rl, preview),
     },
   });
 
   console.log(`\nAssistant:\n${answer}\n`);
+  return answer;
 }
 
 async function main() {
@@ -253,6 +325,11 @@ async function main() {
   }
 
   const rl = readline.createInterface({ input, output });
+  let history: ChatMessage[] = [];
+
+  const resetHistory = () => {
+    history = [];
+  };
 
   const modeLabel = simpleMode ? "simple RAG" : "agent";
   console.log(`AI Coding Assistant (${modeLabel}) — type /help for commands\n`);
@@ -266,15 +343,15 @@ async function main() {
 
     try {
       if (question.startsWith("/")) {
-        await handleCommand(question, rl);
+        await handleCommand(question, rl, resetHistory);
         continue;
       }
 
-      if (simpleMode) {
-        await answerSimple(question);
-      } else {
-        await answerWithAgent(question);
-      }
+      const answer = simpleMode
+        ? await answerSimple(question, history)
+        : await answerWithAgent(question, history, rl);
+
+      history = appendTurn(history, question, answer);
     } catch (error) {
       console.error("Error:", error instanceof Error ? error.message : error);
       console.log();

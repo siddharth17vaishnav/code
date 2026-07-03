@@ -5,10 +5,11 @@ import {
 } from "./parseToolCalls.js";
 import { chat, type ChatMessage, type ToolCall } from "./llm.js";
 import { retrieveHybrid } from "./retriever.js";
+import { trimHistory } from "./session.js";
 import {
   executeTool,
-  getToolDefinitions,
   getToolNames,
+  type ToolContext,
 } from "./tools/registry.js";
 import { getGitSummary, getRecentDiff, isGitQuestion } from "./tools/git.js";
 import { buildPrompt } from "./prompt.js";
@@ -27,11 +28,12 @@ When you need a tool, respond with ONLY a JSON object (no markdown, no explanati
 Examples:
 {"name": "search_codebase", "arguments": {"query": "theme styling"}}
 {"name": "read_file", "arguments": {"path": "app/page.tsx"}}
-{"name": "grep", "arguments": {"pattern": "ThemeProvider"}}
+{"name": "find_importers", "arguments": {"path": "app/stores/themeStore.ts"}}
 
 When you have enough context to answer, respond in plain English.
 Do NOT return JSON for your final answer. Cite file paths and line numbers.
-Do not invent code that is not in the project.`;
+Do not invent code that is not in the project.
+You may receive prior conversation turns — use them for follow-up questions.`;
 }
 
 function normalizeToolCalls(
@@ -48,11 +50,13 @@ function normalizeToolCalls(
 }
 
 export interface AgentOptions {
+  history?: ChatMessage[];
   onStep?: (
     step: number,
     toolName: string,
     args: Record<string, unknown>,
   ) => void;
+  toolContext?: ToolContext;
   maxSteps?: number;
 }
 
@@ -61,9 +65,15 @@ export async function runAgent(
   options?: AgentOptions,
 ): Promise<string> {
   const maxSteps = options?.maxSteps ?? config.agent.maxSteps;
+  const prior = trimHistory(
+    (options?.history ?? []).filter(
+      (message) => message.role === "user" || message.role === "assistant",
+    ),
+  );
 
   const messages: ChatMessage[] = [
     { role: "system", content: buildSystemPrompt() },
+    ...prior,
     { role: "user", content: question },
   ];
 
@@ -90,7 +100,11 @@ export async function runAgent(
       let output: string;
 
       try {
-        output = await executeTool(toolCall.name, toolCall.arguments);
+        output = await executeTool(
+          toolCall.name,
+          toolCall.arguments,
+          options?.toolContext,
+        );
       } catch (error) {
         output =
           error instanceof Error ? error.message : "Tool execution failed.";
@@ -103,10 +117,13 @@ export async function runAgent(
     }
   }
 
-  return runFallbackAnswer(question);
+  return runFallbackAnswer(question, prior);
 }
 
-async function runFallbackAnswer(question: string): Promise<string> {
+async function runFallbackAnswer(
+  question: string,
+  history: ChatMessage[],
+): Promise<string> {
   const chunks = await retrieveHybrid(question);
   let extraContext: string | undefined;
 
@@ -123,7 +140,22 @@ async function runFallbackAnswer(question: string): Promise<string> {
   }
 
   const prompt = buildPrompt(question, chunks, extraContext);
-  return ask(prompt);
+
+  if (history.length === 0) {
+    return ask(prompt);
+  }
+
+  const result = await chat([
+    {
+      role: "system",
+      content:
+        "You are a coding assistant. Answer using the provided context and prior conversation.",
+    },
+    ...history,
+    { role: "user", content: prompt },
+  ]);
+
+  return result.content.trim();
 }
 
 export function formatAgentStep(

@@ -1,9 +1,14 @@
 import { grep } from "./tools/grep.js";
 import { findSymbol } from "./tools/symbols.js";
+import { getChangedFiles } from "./tools/git.js";
 import { config } from "./config.js";
 import { embed } from "./embedder.js";
 import { searchChunks } from "./vectorStore.js";
 import type { GrepMatch, SearchResult } from "./types.js";
+
+function normalizePath(value: string): string {
+  return value.replace(/\\/g, "/");
+}
 
 function extractSymbols(query: string): string[] {
   const matches = query.match(/\b[A-Z][A-Za-z0-9_$]*\b/g) ?? [];
@@ -36,6 +41,23 @@ function symbolToSearchResult(match: {
     endLine: match.line,
     text: match.text,
   };
+}
+
+function prioritizeChangedFiles(
+  chunks: SearchResult[],
+  changedFiles: string[],
+): SearchResult[] {
+  if (changedFiles.length === 0) {
+    return chunks;
+  }
+
+  const changed = new Set(changedFiles.map(normalizePath));
+
+  return [...chunks].sort((left, right) => {
+    const leftChanged = changed.has(normalizePath(left.path)) ? 0 : 1;
+    const rightChanged = changed.has(normalizePath(right.path)) ? 0 : 1;
+    return leftChanged - rightChanged;
+  });
 }
 
 export async function retrieve(
@@ -91,5 +113,13 @@ export async function retrieveHybrid(
     }
   }
 
-  return merged.slice(0, topK);
+  let changedFiles: string[] = [];
+
+  try {
+    changedFiles = await getChangedFiles();
+  } catch {
+    changedFiles = [];
+  }
+
+  return prioritizeChangedFiles(merged, changedFiles).slice(0, topK);
 }

@@ -29,6 +29,7 @@ export const config = {
 
   agent: {
     maxSteps: 8,
+    maxHistoryTurns: 10,
   },
 
   include: [
@@ -59,5 +60,8 @@ export const config = {
     "**/*.svg",
     "**/*.ico",
     "**/*.lock",
+    "**/package-lock.json",
+    "**/pnpm-lock.yaml",
+    "**/yarn.lock",
   ],
 };

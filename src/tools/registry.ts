@@ -5,7 +5,9 @@ import { editProjectFile, readProjectLines } from "./editFile.js";
 import { formatGrepResults, grep } from "./grep.js";
 import {
   findReferences,
+  findImporters,
   formatReferenceResults,
+  formatImporterResults,
   formatImports,
   getImports,
   resetProjectCache,
@@ -13,6 +15,10 @@ import {
 import { formatFileWithLineNumbers, readProjectFile } from "./readFile.js";
 import { findSymbol, formatSymbolResults } from "./symbols.js";
 import { writeProjectFile } from "./writeFile.js";
+import {
+  buildMutationPreview,
+  MUTATING_TOOLS,
+} from "./diff.js";
 
 export interface ToolDefinition {
   type: "function";
@@ -28,6 +34,10 @@ export interface ToolDefinition {
 }
 
 type ToolHandler = (args: Record<string, unknown>) => Promise<string>;
+
+export interface ToolContext {
+  confirm?: (preview: string) => Promise<boolean>;
+}
 
 interface RegisteredTool {
   definition: ToolDefinition;
@@ -195,6 +205,28 @@ const registry: Record<string, RegisteredTool> = {
     },
   },
 
+  find_importers: {
+    definition: {
+      type: "function",
+      function: {
+        name: "find_importers",
+        description: "Find files that import a given module file.",
+        parameters: {
+          type: "object",
+          properties: {
+            path: { type: "string", description: "Relative file path" },
+          },
+          required: ["path"],
+        },
+      },
+    },
+    execute: async (args) => {
+      return formatImporterResults(
+        await findImporters(String(args.path ?? "")),
+      );
+    },
+  },
+
   git_status: {
     definition: {
       type: "function",
@@ -285,11 +317,24 @@ export function getToolNames(): string[] {
 export async function executeTool(
   name: string,
   args: Record<string, unknown>,
+  context?: ToolContext,
 ): Promise<string> {
   const tool = registry[name];
 
   if (!tool) {
     throw new Error(`Unknown tool: ${name}`);
+  }
+
+  if (MUTATING_TOOLS.has(name)) {
+    const preview = await buildMutationPreview(name, args);
+
+    if (context?.confirm) {
+      const approved = await context.confirm(preview);
+
+      if (!approved) {
+        return "Edit cancelled by user.";
+      }
+    }
   }
 
   return tool.execute(args);
