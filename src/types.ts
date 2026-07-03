@@ -29,3 +29,25 @@ export interface StoredChunk extends Chunk {
 export interface SearchResult extends Chunk {
   score?: number;
 }
+
+export interface SyncResult {
+  mode: "full" | "incremental" | "unchanged";
+  added: number;
+  modified: number;
+  deleted: number;
+  chunksEmbedded: number;
+}
+
+export interface GrepMatch {
+  path: string;
+  line: number;
+  text: string;
+}
+
+export interface SymbolMatch {
+  path: string;
+  line: number;
+  kind: "function" | "class" | "interface" | "type" | "export";
+  name: string;
+  text: string;
+}

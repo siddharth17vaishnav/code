@@ -23,6 +23,10 @@ export const config = {
     topK: 8,
   },
 
+  watch: {
+    debounceMs: 2000,
+  },
+
   include: [
     "**/*.ts",
     "**/*.tsx",

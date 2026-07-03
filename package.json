@@ -6,8 +6,10 @@
   "scripts": {
     "index": "tsx src/indexer.ts",
     "index:full": "tsx src/indexer.ts --full",
+    "watch": "tsx src/watch.ts",
     "query": "tsx src/query.ts",
     "chat": "tsx src/chat.ts",
+    "chat:watch": "tsx src/chat.ts --watch",
     "dev": "tsx src/index.ts"
   },
   "keywords": [],
