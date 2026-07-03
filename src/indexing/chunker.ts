@@ -1,8 +1,13 @@
 import type { Chunk } from "../core/types.js";
 import { config } from "../core/config.js";
 
-export function chunkCode(path: string, content: string): Chunk[] {
-  const { maxLines, overlap } = config.chunking;
+export function chunkCode(
+  filePath: string,
+  content: string,
+  options?: { maxLines?: number; overlap?: number },
+): Chunk[] {
+  const maxLines = options?.maxLines ?? config.chunking.maxLines;
+  const overlap = options?.overlap ?? config.chunking.overlap;
   const lines = content.split("\n");
   const chunks: Chunk[] = [];
 
@@ -13,8 +18,8 @@ export function chunkCode(path: string, content: string): Chunk[] {
     const end = Math.min(start + maxLines, lines.length);
 
     chunks.push({
-      id: `${path}:${index}`,
-      path,
+      id: `${filePath}:${index}`,
+      path: filePath,
       startLine: start + 1,
       endLine: end,
       text: lines.slice(start, end).join("\n"),

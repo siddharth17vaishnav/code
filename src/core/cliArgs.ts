@@ -53,6 +53,10 @@ function consumeProjectPath(raw: string | undefined): string | undefined {
   return resolveProjectPath(raw);
 }
 
+export function resetCliCache(): void {
+  cached = null;
+}
+
 export function parseCli(): ParsedCli {
   if (cached) {
     return cached;

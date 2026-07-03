@@ -22,7 +22,8 @@
     "index:full": "tsx src/cli/indexer.ts --full",
     "query": "tsx src/cli/query.ts",
     "watch": "tsx src/cli/watch.ts",
-    "start": "node dist/cli/main.js"
+    "start": "node dist/cli/main.js",
+    "test": "tsx --test tests/**/*.test.ts"
   },
   "keywords": [
     "ai",
