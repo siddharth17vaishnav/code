@@ -2,7 +2,9 @@
 
 Local RAG coding assistant powered by **Ollama** and **LanceDB**. Index any codebase, ask questions, and run an agent with tools — all on your machine.
 
-**npm package:** `code` · **CLI command:** `code`
+**npm:** `@code.siddharth/code` · **CLI command:** `code`
+
+> The unscoped name `code` is taken on npm. Install with the scoped package name — the command is still `code`.
 
 No cloud API. No code leaving your laptop.
 
@@ -61,8 +63,8 @@ ollama pull nomic-embed-text
 ### From source
 
 ```bash
-git clone https://github.com/siddharth17vaishnav/ai-assistant.git
-cd ai-assistant
+git clone https://github.com/siddharth17vaishnav/code.git
+cd code
 npm install
 npm run build
 ```
@@ -70,7 +72,7 @@ npm run build
 ### As a global CLI
 
 ```bash
-npm install -g code
+npm install -g @code.siddharth/code
 ```
 
 Then run **`code`** anywhere (the command name, not the scoped package name):
@@ -82,7 +84,7 @@ code query ./my-app "How does routing work?"
 code --help
 ```
 
-> **Note:** If you have VS Code installed, its `code` command may conflict. Use `npx code` or rename the VS Code alias instead.
+> **Note:** If you have VS Code installed, its `code` command may conflict. Use `npx @code.siddharth/code` or rename the VS Code alias instead.
 
 ### Build the package
 

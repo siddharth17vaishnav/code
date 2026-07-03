@@ -10,7 +10,7 @@ code — local RAG coding assistant
 Usage:
   code <command> [options] [project-path]
 
-Package: code
+Package: @code.siddharth/code (command: code)
 
 Commands:
   chat      Interactive agent chat (default workflow)
@@ -32,7 +32,7 @@ Examples:
   code chat --project D:\\Projects\\MyApp
   code query ./my-app "How does auth work?"
 
-Install globally: npm install -g code
+Install globally: npm install -g @code.siddharth/code
 `.trim();
 
 type CommandRunner = () => Promise<void>;
